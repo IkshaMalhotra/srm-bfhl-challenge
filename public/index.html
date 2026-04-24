@@ -3,148 +3,451 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BFHL Tree Analyzer</title>
+  <title>Tree Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 2rem; }
-    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 0.3rem; color: #38bdf8; }
-    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem; }
-    .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
-    textarea { width: 100%; height: 120px; background: #0f172a; border: 1px solid #475569; border-radius: 8px;
-      color: #e2e8f0; font-size: 0.95rem; padding: 0.8rem; resize: vertical; outline: none; }
-    textarea:focus { border-color: #38bdf8; }
-    button { background: #0ea5e9; color: white; border: none; padding: 0.7rem 2rem;
-      border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
-    button:hover { background: #0284c7; }
-    button:disabled { background: #475569; cursor: not-allowed; }
-    .error { background: #450a0a; border: 1px solid #dc2626; color: #fca5a5; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
-    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 0.75rem; }
-    .tree-card { background: #0f172a; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; border-left: 3px solid #38bdf8; }
-    .tree-card.cycle { border-left-color: #f59e0b; }
-    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; margin-left: 0.5rem; }
-    .badge-cycle { background: #451a03; color: #fcd34d; }
-    .badge-tree { background: #042f2e; color: #34d399; }
-    .root-label { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
-    .depth { color: #94a3b8; font-size: 0.85rem; margin-top: 0.3rem; }
-    pre { background: #0f172a; padding: 0.75rem; border-radius: 6px; font-size: 0.8rem;
-      color: #7dd3fc; overflow-x: auto; margin-top: 0.5rem; border: 1px solid #1e3a5f; }
-    .tag-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
-    .tag { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.8rem; font-family: monospace; }
-    .tag.invalid { border-color: #dc2626; color: #fca5a5; }
-    .tag.dup { border-color: #d97706; color: #fcd34d; }
-    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .summary-item { background: #0f172a; border-radius: 8px; padding: 1rem; text-align: center; }
-    .summary-num { font-size: 2rem; font-weight: 700; color: #38bdf8; }
-    .summary-label { font-size: 0.75rem; color: #64748b; margin-top: 0.3rem; }
-    .hint { color: #475569; font-size: 0.82rem; margin-top: 0.5rem; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0d0f;
+      --surface: #141518;
+      --surface-2: #1a1b1f;
+      --border: rgba(255,255,255,0.07);
+      --border-med: rgba(255,255,255,0.12);
+      --text: #e8e9eb;
+      --text-dim: #6b7280;
+      --text-dimmer: #3d4148;
+      --accent: #c8f0a0;      /* soft sage green — not loud */
+      --accent-dim: rgba(200,240,160,0.08);
+      --accent-border: rgba(200,240,160,0.2);
+      --warn: #f0c040;
+      --warn-dim: rgba(240,192,64,0.08);
+      --warn-border: rgba(240,192,64,0.2);
+      --danger: #f07060;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    html { font-size: 15px; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      /* subtle grid texture */
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ── layout ── */
+    .shell {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem 6rem;
+    }
+
+    /* ── header ── */
+    header {
+      margin-bottom: 3.5rem;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .tagline {
+      margin-top: 0.5rem;
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-weight: 300;
+    }
+
+    /* ── card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dimmer);
+      margin-bottom: 0.85rem;
+    }
+
+    /* ── textarea ── */
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      background: var(--bg);
+      border: 1px solid var(--border-med);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 0.9rem 1rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-dimmer); }
+
+    .hint {
+      margin-top: 0.6rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-dimmer);
+    }
+
+    /* ── button ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      background: var(--accent);
+      color: #0c1408;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.5rem;
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: var(--surface-2); color: var(--text-dim); cursor: not-allowed; transform: none; }
+
+    .btn-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #0c1408;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn.loading .btn-spinner { display: block; }
+    .btn.loading .btn-label { opacity: 0.5; }
+
+    /* ── error ── */
+    .err-box {
+      display: none;
+      background: rgba(240,112,96,0.08);
+      border: 1px solid rgba(240,112,96,0.25);
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.83rem;
+      margin-top: 1rem;
+    }
+
+    /* ── output section ── */
     #output { display: none; }
+
+    /* ── summary grid ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    .stat {
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 1.1rem 1rem;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 1.9rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text);
+      letter-spacing: -0.04em;
+    }
+    .stat-label {
+      margin-top: 0.3rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    /* ── tree cards ── */
+    .tree-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.65rem;
+      border-left: 3px solid var(--accent);
+    }
+    .tree-item.is-cycle {
+      border-left-color: var(--warn);
+    }
+
+    .tree-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .tree-root {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .pill {
+      font-family: var(--mono);
+      font-size: 0.67rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 99px;
+    }
+    .pill-ok { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+    .pill-cycle { background: var(--warn-dim); color: var(--warn); border: 1px solid var(--warn-border); }
+
+    .tree-depth {
+      margin-top: 0.35rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    pre {
+      margin-top: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: #9bbf77;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    /* ── tag lists ── */
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .tag {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 5px;
+    }
+    .tag-bad { background: rgba(240,112,96,0.08); color: var(--danger); border: 1px solid rgba(240,112,96,0.25); }
+    .tag-dup { background: var(--warn-dim); color: var(--warn); border: 1px solid var(--warn-border); }
+
+    .empty-note {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-dimmer);
+    }
+
+    /* ── divider inside flags card ── */
+    .flag-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.25rem 0;
+    }
+
+    /* ── fade-in on result ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.35s ease both; }
+
+    @media (max-width: 520px) {
+      h1 { font-size: 1.8rem; }
+      .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    }
   </style>
 </head>
 <body>
-  <h1>🌲 BFHL Tree Analyzer</h1>
-  <p class="subtitle">Submit node edges and explore hierarchical structures</p>
+<div class="shell">
+
+  <header>
+    <div class="eyebrow">Tree Analyzer</div>
+    <h1>Node Hierarchy<br>Explorer</h1>
+    <p class="tagline">// bfhl · edge-based tree detection</p>
+  </header>
 
   <div class="card">
-    <div class="section-title">Node Edges Input</div>
-    <textarea id="inputField" placeholder='Enter edges separated by commas or newlines, e.g.&#10;A->B, A->C, B->D, X->Y, Y->Z, Z->X'></textarea>
-    <p class="hint">Format: X->Y where X and Y are single uppercase letters (A–Z)</p>
-    <button id="submitBtn" onclick="submitData()">Analyze Hierarchy</button>
+    <div class="label">Edge Input</div>
+    <textarea id="inputField" placeholder="A->B, A->C, B->D&#10;X->Y, Y->Z, Z->X"></textarea>
+    <p class="hint">// format: X->Y · uppercase single letters · comma or newline separated</p>
+    <div id="errBox" class="err-box"></div>
+    <button class="btn" id="submitBtn" onclick="run()">
+      <div class="btn-spinner" id="spinner"></div>
+      <span class="btn-label">Analyze</span>
+    </button>
   </div>
 
-  <div id="errorBox" style="display:none"></div>
   <div id="output">
-    <div class="card" id="summarySection">
-      <div class="section-title">Summary</div>
-      <div class="summary-grid" id="summaryGrid"></div>
+    <div class="card fade-up">
+      <div class="label">Summary</div>
+      <div class="stat-grid" id="statGrid"></div>
     </div>
-    <div class="card" id="hierarchySection">
-      <div class="section-title">Hierarchies</div>
-      <div id="hierarchyList"></div>
+
+    <div class="card fade-up">
+      <div class="label">Hierarchies</div>
+      <div id="treeList"></div>
     </div>
-    <div class="card" id="flagsSection">
-      <div class="section-title">Invalid Entries</div>
-      <div class="tag-list" id="invalidList"></div>
-      <div class="section-title" style="margin-top:1rem">Duplicate Edges</div>
-      <div class="tag-list" id="dupList"></div>
+
+    <div class="card fade-up">
+      <div class="label">Invalid Entries</div>
+      <div class="tag-row" id="invalidList"></div>
+      <hr class="flag-sep">
+      <div class="label">Duplicate Edges</div>
+      <div class="tag-row" id="dupList"></div>
     </div>
   </div>
 
-  <script>
-    async function submitData() {
-      const raw = document.getElementById('inputField').value.trim();
-      const errBox = document.getElementById('errorBox');
-      errBox.style.display = 'none';
-      document.getElementById('output').style.display = 'none';
+</div>
 
-      if (!raw) { showError('Please enter at least one edge.'); return; }
+<script>
+  async function run() {
+    const raw = document.getElementById('inputField').value.trim();
+    const errBox = document.getElementById('errBox');
+    const btn = document.getElementById('submitBtn');
+    const out = document.getElementById('output');
 
-      // Parse: split by comma or newline
-      const data = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    errBox.style.display = 'none';
+    out.style.display = 'none';
 
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Analyzing...';
+    if (!raw) { showErr('Enter at least one edge.'); return; }
 
-      try {
-        const res = await fetch('/bfhl', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data })
-        });
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        const json = await res.json();
-        renderOutput(json);
-      } catch (e) {
-        showError('API call failed: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Analyze Hierarchy';
-      }
+    // split on commas or newlines
+    const data = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    console.log('[tree-analyzer] sending edges:', data);
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    try {
+      const res = await fetch('/bfhl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data })
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const json = await res.json();
+      console.log('[tree-analyzer] response:', json);
+      render(json);
+    } catch (e) {
+      showErr('Request failed — ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
     }
+  }
 
-    function showError(msg) {
-      const b = document.getElementById('errorBox');
-      b.innerHTML = `<div class="error">⚠️ ${msg}</div>`;
-      b.style.display = 'block';
-    }
+  function showErr(msg) {
+    const b = document.getElementById('errBox');
+    b.textContent = msg;
+    b.style.display = 'block';
+  }
 
-    function renderOutput(json) {
-      // Summary
-      const s = json.summary;
-      document.getElementById('summaryGrid').innerHTML = `
-        <div class="summary-item"><div class="summary-num">${s.total_trees}</div><div class="summary-label">Valid Trees</div></div>
-        <div class="summary-item"><div class="summary-num">${s.total_cycles}</div><div class="summary-label">Cyclic Groups</div></div>
-        <div class="summary-item"><div class="summary-num">${s.largest_tree_root ?? '—'}</div><div class="summary-label">Deepest Root</div></div>
+  function render(json) {
+    const s = json.summary;
+
+    // summary stats
+    document.getElementById('statGrid').innerHTML = `
+      <div class="stat">
+        <div class="stat-num">${s.total_trees}</div>
+        <div class="stat-label">Valid Trees</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">${s.total_cycles}</div>
+        <div class="stat-label">Cyclic Groups</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">${s.largest_tree_root ?? '—'}</div>
+        <div class="stat-label">Deepest Root</div>
+      </div>
+    `;
+
+    // each hierarchy
+    const list = document.getElementById('treeList');
+    list.innerHTML = '';
+    for (const h of json.hierarchies) {
+      const div = document.createElement('div');
+      div.className = 'tree-item' + (h.has_cycle ? ' is-cycle' : '');
+
+      const badge = h.has_cycle
+        ? '<span class="pill pill-cycle">cycle</span>'
+        : '<span class="pill pill-ok">tree</span>';
+
+      const depth = h.depth !== undefined
+        ? `<div class="tree-depth">depth ${h.depth}</div>` : '';
+
+      const treeJson = !h.has_cycle
+        ? `<pre>${JSON.stringify(h.tree, null, 2)}</pre>` : '';
+
+      div.innerHTML = `
+        <div class="tree-head">
+          <span class="tree-root">${h.root}</span>
+          ${badge}
+        </div>
+        ${depth}
+        ${treeJson}
       `;
-
-      // Hierarchies
-      const hl = document.getElementById('hierarchyList');
-      hl.innerHTML = '';
-      for (const h of json.hierarchies) {
-        const div = document.createElement('div');
-        div.className = 'tree-card' + (h.has_cycle ? ' cycle' : '');
-        const badge = h.has_cycle
-          ? '<span class="badge badge-cycle">⚠ Cycle</span>'
-          : '<span class="badge badge-tree">✓ Tree</span>';
-        const depthLine = h.depth !== undefined ? `<div class="depth">Depth: ${h.depth} nodes</div>` : '';
-        const treePre = !h.has_cycle ? `<pre>${JSON.stringify(h.tree, null, 2)}</pre>` : '';
-        div.innerHTML = `<div class="root-label">Root: ${h.root} ${badge}</div>${depthLine}${treePre}`;
-        hl.appendChild(div);
-      }
-
-      // Invalid & Duplicates
-      const il = document.getElementById('invalidList');
-      il.innerHTML = json.invalid_entries.length
-        ? json.invalid_entries.map(e => `<span class="tag invalid">${e}</span>`).join('')
-        : '<span style="color:#475569;font-size:0.85rem">None</span>';
-
-      const dl = document.getElementById('dupList');
-      dl.innerHTML = json.duplicate_edges.length
-        ? json.duplicate_edges.map(e => `<span class="tag dup">${e}</span>`).join('')
-        : '<span style="color:#475569;font-size:0.85rem">None</span>';
-
-      document.getElementById('output').style.display = 'block';
+      list.appendChild(div);
     }
-  </script>
+
+    // invalid & duplicates
+    const il = document.getElementById('invalidList');
+    il.innerHTML = json.invalid_entries.length
+      ? json.invalid_entries.map(e => `<span class="tag tag-bad">${e}</span>`).join('')
+      : '<span class="empty-note">none</span>';
+
+    const dl = document.getElementById('dupList');
+    dl.innerHTML = json.duplicate_edges.length
+      ? json.duplicate_edges.map(e => `<span class="tag tag-dup">${e}</span>`).join('')
+      : '<span class="empty-note">none</span>';
+
+    document.getElementById('output').style.display = 'block';
+  }
+</script>
 </body>
 </html>
